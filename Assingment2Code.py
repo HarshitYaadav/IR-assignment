@@ -91,6 +91,23 @@ def search_documents(user_query, directory_path):
     # Step 2: Preprocess the query (tokenize and clean)
     query_tokens = clean_and_tokenize(user_query)
     
+    # Step 3: Compute tf-idf for query terms
+    query_tf_idf = calculate_query_tf_idf(query_tokens, index, doc_count)
+    
+    # Step 4: Calculate cosine similarity for each document
+    similarity_scores = compute_cosine_similarity(query_tf_idf, index, doc_lengths)
+    
+    # Step 5: Sort documents by similarity score and document name for ties
+    ranked_documents = sorted(similarity_scores.items(), key=lambda item: (-item[1], item[0]))
+    
+    # Return the top 10 ranked documents
+    return ranked_documents[:10]
+
+# User input for the search query
+query = input("Enter your search query: ")
+
+# Get the ranked results from the search function
+results = search_documents(query, CORPUS_DIRECTORY)
 
 # Display the results in the required format (document name and similarity score)
 for document, score in results:
