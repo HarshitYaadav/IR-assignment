@@ -11,6 +11,12 @@ def clean_and_tokenize(text):
     lowercase_text = text.lower()  # Convert text to lowercase
     tokens = re.findall(r'\b\w+\b', lowercase_text)  # Extract tokens (words)
     return tokens
+
+# Function to build the inverted index and document lengths
+def create_inverted_index(directory_path):
+    inverted_index = defaultdict(list)  # Dictionary to store term -> [(doc_name, term_freq)]
+    document_lengths = defaultdict(float)  # To store document lengths for normalization
+    total_docs = 0  # Counter for the total number of documents
     
     # Loop through each document in the corpus directory
     for document_name in os.listdir(directory_path):
@@ -58,6 +64,24 @@ def calculate_query_tf_idf(query_words, index, total_docs):
     
     return query_tf_idf
 
+# Function to calculate cosine similarity between the query and documents
+def compute_cosine_similarity(query_weights, index, doc_lengths):
+    document_scores = defaultdict(float)  # To store similarity scores for each document
+    
+    # Compute dot product for each document containing query terms
+    for word, query_weight in query_weights.items():
+        if word in index:
+            postings = index[word]
+            for doc_name, doc_term_freq in postings:
+                document_weight = 1 + math.log10(doc_term_freq)  # Document term frequency (TF)
+                document_scores[doc_name] += query_weight * document_weight  # Dot product for cosine similarity
+    
+    # Normalize document scores using their precomputed lengths
+    for doc_name in document_scores:
+        if doc_lengths[doc_name] != 0:  # Avoid division by zero
+            document_scores[doc_name] /= doc_lengths[doc_name]  # Cosine normalization
+    
+    return document_scores
 
 # Main function to handle user queries and output results
 def search_documents(user_query, directory_path):
@@ -67,23 +91,6 @@ def search_documents(user_query, directory_path):
     # Step 2: Preprocess the query (tokenize and clean)
     query_tokens = clean_and_tokenize(user_query)
     
-    # Step 3: Compute tf-idf for query terms
-    query_tf_idf = calculate_query_tf_idf(query_tokens, index, doc_count)
-    
-    # Step 4: Calculate cosine similarity for each document
-    similarity_scores = compute_cosine_similarity(query_tf_idf, index, doc_lengths)
-    
-    # Step 5: Sort documents by similarity score and document name for ties
-    ranked_documents = sorted(similarity_scores.items(), key=lambda item: (-item[1], item[0]))
-    
-    # Return the top 10 ranked documents
-    return ranked_documents[:10]
-
-# User input for the search query
-query = input("Enter your search query: ")
-
-# Get the ranked results from the search function
-results = search_documents(query, CORPUS_DIRECTORY)
 
 # Display the results in the required format (document name and similarity score)
 for document, score in results:
